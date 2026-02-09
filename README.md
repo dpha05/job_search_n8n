@@ -2,7 +2,7 @@
 
 An end-to-end automation pipeline that filters raw job leads down to the top 10% matches using n8n, Supabase, and Cosine Similarity.
 
-# Key Highlights
+**Key Highlights**
 - **Hydration Map Bypass:** 11-node regex parser to extract data from XML sitemap without the overhead of JS scrapers and reducing cost and maintenance to 0.
 
 - **Multi-Layer Filtering:** two-stage pre-filter using Regex for structured XML, raw HTML extraction and Keyword-matching for API stream to funnel pre-vetted leads.
