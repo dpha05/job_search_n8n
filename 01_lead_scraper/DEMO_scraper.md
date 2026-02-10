@@ -1,4 +1,4 @@
-# Phase 1: Lead Scraping & Deduplication
+# 🚀 Phase 1: Lead Scraping & Deduplication
 **Automated data extraction from LinkedIn & StartupJobs.cz with vector-based filtering.**
 
 <br>
@@ -57,6 +57,16 @@
 ### 📂 Technical Documentation
 * [**Raw JSON Workflows**](workflows/)
 * [**Detailed Technical README**](../README.md)
+
+<br>
+
+---
+
+### ✅ Next steps
+* **Source Expansion:** Expanding sources to include Wellfound, Jobs.cz, and Startup.jobs to get a more quality wide upper funnel.
+* **Manual Source Bridge:** Connecting a Google Sheets flow for manual entry of leads from newsletters and other sources directly into the pipeline.
+* **Active URL monitor:** Adding a validation sub-flow to perform daily status checks on live URLs, automatically flagging expired listings as `archived` in Supabase.
+* **Format Standardization:** Refactoring all event-driven flows to use a standardized Set Node pattern for multi-source data normalization.
 
 <br>
 
