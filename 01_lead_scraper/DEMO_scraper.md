@@ -15,7 +15,7 @@
 
 <br>
 
-<video src="assets/demo.mp4" autoplay loop muted playsinline width="100%"></video>
+![](https://github.com/USER/REPO/raw/main/01_lead_scraper/assets/demo.gif)
 
 <br>
 
