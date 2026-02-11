@@ -1,0 +1,937 @@
+{
+  "name": "score_filtered",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1264,
+        -416
+      ],
+      "id": "cb0e8e98-243e-4a2f-a18e-34b1ecbbff82",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-flash-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        -240
+      ],
+      "id": "976ae8af-eb10-4356-97ac-0ca82a324099",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YhtGw7h88f9jUZts",
+          "name": "Google Gemini(PaLM) Api account_llm"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        -416
+      ],
+      "id": "e14d8a28-f538-40fa-9296-dc4c78ee3832",
+      "name": "Wait1",
+      "webhookId": "0f880b01-94fc-44dc-b1f7-a695416193b6"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rawMission = $json.output.mission_score; \nconst rawResponsibility = $json.output.responsibility_score;\n\nconst minRange = 0.10;\nconst maxRange = 0.90;\n\nconst adjust = (score) => {\n    let adjustedScore = (score - minRange) / (maxRange - minRange);\n    return Math.max(0, Math.min(1, adjustedScore));\n};\n\nconst adjustedMission = adjust(rawMission);\nconst adjustedResponsibility = adjust(rawResponsibility);\n\nreturn {\n    mission_score: adjustedMission,\n    responsibility_score: adjustedResponsibility,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -416
+      ],
+      "id": "c5e0aa07-f4ba-4bc2-a53a-281ff51ea938",
+      "name": "Adjust score llm"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rawCosine = $json.ideal_score_cosine;\n\nconst min = 0.53;\nconst max = 0.67;\n\nlet adjustedCosine = (rawCosine - min) / (max - min);\n\nadjustedCosine = Math.max(0, Math.min(1, adjustedCosine));\n\nreturn  {\n    ideal_score_cosine: adjustedCosine\n  }\n;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        -80
+      ],
+      "id": "05e8e6b6-a5f5-4c09-938a-800b0443be5e",
+      "name": "Adjust score cosine"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3872,
+        -480
+      ],
+      "id": "30ea8437-7e6d-4cde-8c91-9d3d3e59f871",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        -736
+      ],
+      "id": "92b12ae2-b221-4eb4-ac6d-ba7a5eaec4dc",
+      "name": "Wait",
+      "webhookId": "4fb55569-26d1-41c6-82d6-e90c134f1b4e"
+    },
+    {
+      "parameters": {
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        -560
+      ],
+      "id": "4acc69d6-6d16-4054-8d7b-1ee23e7c988b",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "WHKYJmDyVoPXPzmK",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Reference Calibration (Stay consistent with these verified scores):\n\nPillar 1: Mission Alignment\n\nEducation (High Impact): Academy of Digital Industries = 0.82\n\nProductivity SaaS (Neutral): Make.com = 0.35\n\nCommercial SW House (Capped): ARTIN = 0.25\n\nPurely Commercial (Baseline): Inbank = 0.15\n\nPillar 2: Responsibility Fit (Autonomy/Bridge)\n\nADI (Mentor/Designer): High creative autonomy & design freedom = 0.90\n\nMake (Product Manager): High strategic bridge & \"CEO of product\" = 0.85\n\nARTIN (AI Engineer): Creative problem solving over instructions = 0.80\n\nAltamira (Consultant): Bridge role but limited by client/bank frameworks = 0.70\n\nInbank (Implementation): Operational bridge but within rigid finance rails = 0.65\n\nTask: Now, score the following job based on the scales and anchors provided above:\n\nTitle: {{ $json.job_title }}\n\nLevel: {{ $json.experience_level }}\n\nDescription: {{ $json.job_description }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "<system_instructions>\n<persona>\nSenior Talent Scout specialized in Impact-Driven Roles. You value social beauty, compassion, and the democratization of technology. You are an expert at identifying \"Bridge Roles\" where technical AI implementation meets human-centric autonomy.\n</persona>\n\n<task>\nAnalyze the JD and calculate two distinct scores: \n1. \"Mission Alignment Score\": How much the organization's CORE purpose aligns with Social Good, Education, or Open Source.\n2. \"Responsibility Fit Score\": How much the daily tasks allow for autonomy, AI system design, and high-empathy communication (Speaking/Listening).\n</task>\n\n<scoring_anchors_pillar_1_mission>\n0.0 - 0.2: PURELY COMMERCIAL. Banks, standard SaaS, Retail, or Insurance. (Baseline)\n0.3 - 0.5: SEMI-IMPACT / LOCAL. Local small businesses or startups with a \"neutral\" mission.\n0.6 - 0.8: CORE IMPACT. Educational platforms, Open Source contributors, or \"Tech for Good\" initiatives.\n0.9 - 1.0: THE IDEAL MISSION. NGOs, Environmental protection, Global Education, or Non-profit humanitarian work.\n</scoring_anchors_pillar_1_mission>\n\n<scoring_anchors_pillar_2_responsibility>\n0.0 - 0.3: RIGID / SILOED. Pure execution, ticket-based work, no design freedom, or purely technical dev with no human interface.\n0.4 - 0.6: MODERATE / HYBRID. Some design freedom but follows strict corporate frameworks. Limited empathy/speaking requirements.\n0.7 - 0.9: HIGH AUTONOMY / BRIDGE. \"Own the process,\" create syllabuses/frameworks, design AI workflows, or lead implementation through high-empathy communication.\n1.0: THE PERFECT FIT. Complete autonomy to design AI solutions/education from scratch with a focus on human-centric implementation.\n</scoring_anchors_pillar_2_responsibility>\n\n<logic_rules>\n- PILLAR 1: \"NGO/Charity/Non-profit\" = Min 0.85. Primary product \"Education\" = Min 0.70. Commercial SW House cap = 0.30.\n- PILLAR 2: If the JD mentions \"shaping the role,\" \"designing the framework,\" or \"owning the strategy,\" increase fit by 0.2.\n- PILLAR 2: If the role is purely \"maintaining existing systems\" or \"following technical specs,\" cap fit at 0.4.\n- PILLAR 2: Empathy/Speaking/Mentoring tasks are positive signals; don't penalize \"Teaching\" if there is design freedom.\n</logic_rules>\n\n<few_shot_examples>\n<example>\n<jd_snippet>\"AI Data Solutions Engineer for a large bank. Follow existing agile processes to maintain data pipelines.\"</jd_snippet>\n<thought_process>\nMission: Bank is purely commercial (0.15). \nResponsibility: Mentions \"following existing processes\" and \"maintaining.\" Low autonomy and no mention of bridge-style communication.\n</thought_process>\n<mission_score>0.15</mission_score>\n<responsibility_score>0.25</responsibility_score>\n</example>\n<example>\n<jd_snippet>\"AI Enablement Lead. Own the AI adoption strategy, design internal training, and coach teams on AI implementation.\"</jd_snippet>\n<thought_process>\nMission: SaaS/Internal tool (0.40). \nResponsibility: \"Own the strategy\" and \"Design training\" signal high autonomy. \"Coaching\" hits empathy and speaking skills. This is a classic Bridge Role.\n</thought_process>\n<mission_score>0.40</mission_score>\n<responsibility_score>0.90</responsibility_score>\n</example>\n</few_shot_examples>\n\n<constraints>\n- Thought Process: MUST be written first, then reasoning for both pillars, then the scores.\n- Format: Respond only in valid JSON.\n- Input Language: Czech, Slovak, English.\n</constraints>\n</system_instructions>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1936,
+        -416
+      ],
+      "id": "70e0e1f9-348a-47a7-967e-fa42a05886f7",
+      "name": "Check pillar fit - llm",
+      "retryOnFail": true,
+      "waitBetweenTries": 4000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM check_vibe(\n  '{{ $json.description_vector }}'::vector(1536),\n  'ideal_anchor'\n) AS ideal_score_cosine;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        -80
+      ],
+      "id": "e0f7a1d5-98c3-4dba-b290-b31a9666d5f1",
+      "name": "Check ideal - cosine",
+      "alwaysOutputData": false,
+      "credentials": {
+        "postgres": {
+          "id": "wub5gbhgKNBgMsXa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this JD: {{ $json.job_description }}\n\nhere is additional job info: \nsalary: {{ $json.job_salary }}\ncontract type: {{ $json.contract_type }}\nwork mode: {{ $json.work_mode }}\nlocation: {{ $json.job_location }}\n\nExtract the following data as \"Yes\" or \"No\":\n\n--- REMOTE LADDER ---\n1. remote_5_5: Is it 100% fully remote?\n2. remote_4_1: Is it 4 days remote, 1 in office?\n3. remote_3_2: Is it 3 days remote, 2 in office?\n4. remote_2_3: Is it 2 days remote, 3 in office?\n5. remote_1_4: Is it 1 day remote, 4 in office?\n\n--- SALARY LADDER ---\n6. salary_120k_plus: Is salary 120k CZK/mo or higher?\n7. salary_100k_120k: Is salary between 100k and 120k CZK/mo?\n8. salary_90k_100k: Is salary between 90k and 100k CZK/mo?\n9. salary_80k_90k: Is salary between 80k and 90k CZK/mo?\n10. salary_70k_80k: Is salary between 70k and 80k CZK/mo?\n\n--- TEAM & PERKS ---\n11. is_international: Is the team described as international, global, or English-speaking?\n12. is_startup: Is the company described as a startup or early-stage?\n13. team_under_5: Is the team size explicitly 5 people or fewer?\n14. team_5_to_10: Is the team size between 6 and 10 people?\n15. has_equity: Does it mention RSUs, stocks, options, or equity?\n16. has_car: Is a company car or car allowance mentioned?\n17. has_edu_budget: Is there a budget for courses, books, or certifications?\n18. has_4_day_week: Is a 4-day or 32-hour work week mentioned?\n\n--- TECH & WORKFLOW ---\n19. uses_n8n: Does it mention n8n or workflow automation?\n20. uses_cursor: Does it mention Cursor or \"vibe-coding\"?\n21. uses_mcp: Does it mention MCP (Model Context Protocol)?\n22. uses_agents: Does it mention AI Agents or Autonomous Agents?\n23. uses_langchain_vector: Does it mention LangChain, LlamaIndex, or Vector Databases (Pinecone, Weaviate, etc.)?\n24. flexible_hours: Does it mention flexible working hours?\n25. direct_impact: Does it mention reporting to or working directly with founders, CEO, CTO, or \"C-level\"?\n\n\n--- THE UNICORN PERKS ---\n26. has_home_office_budget: Does it mention a budget for your home setup?\n27. is_result_driven: Does it mention \"result-based,\" \"output-oriented,\" or \"finish work and you're done\"?\n28. is_flat_hierarchy: Does it mention \"flat hierarchy,\" \"no red tape,\" \"no bureaucracy,\" or \"autonomous teams\"?\n29. is_async_focus: Does it mention \"asynchronous,\" \"deep work,\" \"focus time,\" or \"no-meeting culture\"?\n30. has_free_food: Does it mention free breakfast, lunch, or snacks in the office?\n31. has_retreats: Does it mention \"team retreats,\" \"offsites,\" or \"company trips\"?\n32. has_autonomy: Does it mention \"svoboda,\" \"self-management,\" \"choosing your own tools,\" or \"freedom in how to solve problems\"?\n... (and re-number the rest)\n\n--- ADDONS ---\n33. uses_automation_proxies: \"Yes\" if it mentions Make (Integromat), Zapier, or \"low-code automation\" generally.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "<task>\nAct as a precise Data Extraction Unit. Your only goal is to answer a set of Boolean questions based STRICTLY on the provided Job Description.\n</task>\n\n<rules>\n- Respond ONLY using the provided JSON output tool.\n- Answer every question with exactly \"Yes\" or \"No\".\n- CRITICAL: If a benefit is NOT mentioned, you must output \"No\". Never use \"Not Mentioned\".\n- Use semantic understanding (e.g., \"WFH\" or \"Anywhere\" = Remote).\n- Do not use outside knowledge or research.\n- For the \"Remote Ladder\" and \"Salary Ladder\", only mark \"Yes\" for the most accurate specific range.\n- is_flat_hierarchy: Must explicitly mention \"flat hierarchy,\" \"no managers,\" \"holacracy,\" or \"horizontal structure.\"\n- is_result_driven: Must explicitly mention \"results only,\" \"output-based,\" or \"no tracked hours.\"\n- is_async_focus: Must explicitly mention \"async,\" \"no-meeting,\" or \"deep work.\"\n- Be STRICT with \"Direct Impact\": Only \"Yes\" if C-suite, Founders, or \"Management-free reporting\" is mentioned.\n- uses_automation_proxies: Only \"Yes\" if competitive tools like Make, Integromat, or Zapier are mentioned.\n- has_autonomy: Answer \"Yes\" if there is ANY mention (even once) of self-reliance, creative/strategic control, independence, \"shaping,\" \"owning a product,\" or \"freedom to explore.\" or \"being CEO of own product\". \nCRITICAL: A single mention is an automatic \"Yes\" trigger. Do NOT weigh this against mentions of meetings, collaboration, or stakeholders. If the signal exists, the answer is \"Yes\".\n\n</rules>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1904,
+        -736
+      ],
+      "id": "4a846674-e311-4d4a-9c85-a5ec82124d2a",
+      "name": "Check bonus boolean"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let bonus = 0;\nconst data = $json.output; \n\n// 1. Remote & Salary\nif (data.remote_5_5 === \"Yes\") bonus += 50;\nelse if (data.remote_4_1 === \"Yes\") bonus += 40;\nelse if (data.remote_3_2 === \"Yes\") bonus += 30;\nelse if (data.remote_2_3 === \"Yes\") bonus += 20;\nelse if (data.remote_1_4 === \"Yes\") bonus += 10;\nif (data.salary_120k_plus === \"Yes\") bonus += 70;\nelse if (data.salary_100k_120k === \"Yes\") bonus += 50;\nelse if (data.salary_90k_100k === \"Yes\") bonus += 40;\nelse if (data.salary_80k_90k === \"Yes\") bonus += 25;\nelse if (data.salary_70k_80k === \"Yes\") bonus += 10;\n\n// 2. High-Value Culture\nif (data.has_4_day_week === \"Yes\") bonus += 100;\nif (data.is_flat_hierarchy === \"Yes\") bonus += 70;\nif (data.is_async_focus === \"Yes\") bonus += 45;\nif (data.has_autonomy === \"Yes\") bonus += 40;\nif (data.is_result_driven === \"Yes\") bonus += 40;\nif (data.direct_impact === \"Yes\") bonus += 35;\n\n// 3. Tech Stack\nif (data.uses_n8n === \"Yes\") bonus += 50;\nif (data.uses_automation_proxies === \"Yes\") bonus += 25; \nif (data.uses_cursor === \"Yes\") bonus += 25;\nif (data.uses_mcp === \"Yes\") bonus += 35;\nif (data.uses_agents === \"Yes\") bonus += 50;\nif (data.uses_langchain_vector === \"Yes\") bonus += 15;\n\n// 4. Perks & Environment\nif (data.has_equity === \"Yes\") bonus += 30;\nif (data.is_international === \"Yes\") bonus += 20;\nif (data.is_startup === \"Yes\") bonus += 30;\nif (data.has_edu_budget === \"Yes\") bonus += 20;\nif (data.has_free_food === \"Yes\") bonus += 15;\nif (data.has_home_office_budget === \"Yes\") bonus += 15;\nif (data.has_retreats === \"Yes\") bonus += 15;\nif (data.team_under_5 === \"Yes\") bonus += 25;\nif (data.team_5_to_10 === \"Yes\") bonus += 15;\nif (data.has_car === \"Yes\") bonus += 50;\nif (data.flexible_hours === \"Yes\") bonus += 10;\n\nreturn { \n  total_score: bonus,\n  bonus: data \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        -736
+      ],
+      "id": "88c41b2d-6b0e-4169-9274-4bd4df6c6354",
+      "name": "Calculate bonus"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $json;\n\nconst missionScore = item.mission_score;\nconst responsibilityScore = item.responsibility_score;\nconst idealScoreCosine = item.ideal_score_cosine;\n\nconst weightMission = 0.4;\nconst weightResponsibility = 0.4;\nconst weightCosine = 0.2;\n\nconst finalWeightedScore = (missionScore * weightMission) + (responsibilityScore * weightResponsibility) + (idealScoreCosine * weightCosine);\n\nreturn {\n  final_weighted_score: finalWeightedScore,\n  mission_weighted: missionScore * weightMission,\n  responsibility_weighted: responsibilityScore * weightResponsibility,\n  cosine_weighted: idealScoreCosine * weightCosine\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        -256
+      ],
+      "id": "ed0b2696-2bee-4084-a1ba-9f1177d10858",
+      "name": "Calculate weighted sum"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "job_leads",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "job_url",
+              "condition": "eq",
+              "keyValue": "={{ $json.job_url }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "metadata",
+              "fieldValue": "={{ $json.metadata }}"
+            },
+            {
+              "fieldId": "processed_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "match_score",
+              "fieldValue": "={{ $json.match_score }}"
+            },
+            {
+              "fieldId": "signal_tier",
+              "fieldValue": "={{ $json.signal_tier }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "scored"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3216,
+        -496
+      ],
+      "id": "8e978713-c70e-4827-9061-0da22baf9791",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "qB1TBV7vyX50RGhp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const pillarScore = $input.item.json.final_weighted_score;\nconst bonusScore = $input.item.json.total_score;\nconst mission = $input.item.json.mission_weighted;\nconst responsibility = $input.item.json.responsibility_weighted;\n\nconst pillarMultiplier = 300;\n\nconst pillarScoreMultiplied = Math.round(pillarScore * pillarMultiplier);\nlet finalSumScore = pillarScoreMultiplied + bonusScore;\n\nlet signalTier = 'low';\n\nif (mission >= 0.3 && responsibility >= 0.3) {\n  signalTier = 'rare';\n} else if (finalSumScore >= 400) {\n  signalTier = 'high';\n} else if (finalSumScore >= 280) {\n  signalTier = 'mid';\n}\n\nreturn {\n  signal_tier: signalTier,\n  match_score: finalSumScore,\n  job_url:$('Standardize input').item.json.job_url,\n  metadata: {\n    scores: {\n      mission,\n      responsibility,\n      pillar: pillarScoreMultiplied,\n      bonus: bonusScore,\n    },\n    flags: {\n      remote_5_5: $json.bonus.remote_5_5,\n      remote_4_1: $json.bonus.remote_4_1,\n      remote_3_2: $json.bonus.remote_3_2,\n      salary_120k_plus: $json.bonus.salary_120k_plus,\n      salary_100k_120k: $json.bonus.salary_100k_120k,\n      salary_90k_100k: $json.bonus.salary_90k_100k,\n      team_under_5: $json.bonus.team_under_5,\n      equity: $json.bonus.has_equity,\n      car: $json.bonus.has_car,\n      n8n: $json.bonus.uses_n8n,\n      agents: $json.bonus.uses_agents,\n      result_driven: $json.bonus.is_result_driven,\n      flat_hierarchy: $json.bonus.is_flat_hierarchy\n    }\n  }\n}\n;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3024,
+        -496
+      ],
+      "id": "df4a8b54-fd8d-4aca-9c43-ee44a9076904",
+      "name": "Finalize sum + payload"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "nvHCNWL4_7W0r-v9r2u0G",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/nvHCNWL4_7W0r-v9r2u0G",
+          "cachedResultName": "research_high_rare"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        3648,
+        -640
+      ],
+      "id": "d497ab3e-f979-4636-aa52-d885b7a97067",
+      "name": "Call 'research_high_rare'"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "76330b5c-f689-4ce0-b216-8a98ee0b65cf",
+              "leftValue": "={{ $json.signal_tier }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d6d2ede8-4542-4e55-87b9-8b86170d91ec",
+              "leftValue": "={{ $json.signal_tier }}",
+              "rightValue": "rare",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3408,
+        -496
+      ],
+      "id": "77a138be-a829-4fde-bacf-4dad4dc35fc8",
+      "name": "Is high or rare?"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"thought_process\": \"text\",\n  \"reasoning\": \"text\",\n  \"mission_score\": 0.72,\n  \"responsibility_score\": 0.45\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2128,
+        -240
+      ],
+      "id": "be9938cb-4b38-453a-a17e-52dbecc06f63",
+      "name": "Structured Output Parser1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"remote_5_5\": { \"type\": \"string\" },\n    \"remote_4_1\": { \"type\": \"string\" },\n    \"remote_3_2\": { \"type\": \"string\" },\n    \"remote_2_3\": { \"type\": \"string\" },\n    \"remote_1_4\": { \"type\": \"string\" },\n    \"salary_120k_plus\": { \"type\": \"string\" },\n    \"salary_100k_120k\": { \"type\": \"string\" },\n    \"salary_90k_100k\": { \"type\": \"string\" },\n    \"salary_80k_90k\": { \"type\": \"string\" },\n    \"salary_70k_80k\": { \"type\": \"string\" },\n    \"is_international\": { \"type\": \"string\" },\n    \"is_startup\": { \"type\": \"string\" },\n    \"team_under_5\": { \"type\": \"string\" },\n    \"team_5_to_10\": { \"type\": \"string\" },\n    \"has_equity\": { \"type\": \"string\" },\n    \"has_car\": { \"type\": \"string\" },\n    \"has_edu_budget\": { \"type\": \"string\" },\n    \"has_4_day_week\": { \"type\": \"string\" },\n  \"uses_n8n\": { \"type\": \"string\" },\n    \"uses_cursor\": { \"type\": \"string\" },\n    \"uses_mcp\": { \"type\": \"string\" },\n    \"uses_agents\": { \"type\": \"string\" },\n    \"uses_langchain_vector\": { \"type\": \"string\" },\n    \"flexible_hours\": { \"type\": \"string\" },\n    \"direct_impact\": { \"type\": \"string\" },\n    \"has_home_office_budget\": { \"type\": \"string\" },\n    \"is_result_driven\": { \"type\": \"string\" },\n    \"is_flat_hierarchy\": { \"type\": \"string\" },\n    \"is_async_focus\": { \"type\": \"string\" },\n    \"has_free_food\": { \"type\": \"string\" },\n    \"has_retreats\": { \"type\": \"string\" },\n    \"has_autonomy\": { \"type\": \"string\" },\n    \"uses_automation_proxies\": { \"type\": \"string\" }\n}\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2096,
+        -560
+      ],
+      "id": "bd16f1b1-611f-468b-8010-966380ce04fd",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2816,
+        -496
+      ],
+      "id": "17aafdd0-97db-425d-8e08-5cd8ee95ef93",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2432,
+        -256
+      ],
+      "id": "a6868d60-8e87-4341-8bc1-9b53bfdcb39a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7e6f82e4-042a-49fe-b7d9-34eafdead4e7",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "98dd640c-efc3-4cc2-8f45-442711c3aaf6",
+              "name": "published_at",
+              "value": "={{ $json.published_at }}",
+              "type": "string"
+            },
+            {
+              "id": "ddc97d13-cf78-4120-af9c-2135094c68e5",
+              "name": "company_name",
+              "value": "={{ $json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "d83105f2-d36e-4f58-a304-048d6b1cea81",
+              "name": "job_title",
+              "value": "={{ $json.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "98472579-8758-49e7-afb3-4c9cccec75bc",
+              "name": "job_url",
+              "value": "={{ $json.job_url }}",
+              "type": "string"
+            },
+            {
+              "id": "b750dd49-51e3-4f87-a61a-c4c33978f17d",
+              "name": "match_score",
+              "value": "={{ $json.match_score }}",
+              "type": "number"
+            },
+            {
+              "id": "9988f698-c59a-4a5c-8162-81c45b75e224",
+              "name": "job_description",
+              "value": "={{ $json.job_description }}",
+              "type": "string"
+            },
+            {
+              "id": "5804039c-ea1b-43fd-8c6b-bb4b3cbcbdbb",
+              "name": "job_location",
+              "value": "={{ $json.job_location }}",
+              "type": "string"
+            },
+            {
+              "id": "429a78c3-9b24-4a4f-96c3-43aaee37d6c3",
+              "name": "external_id",
+              "value": "={{ $json.external_id }}",
+              "type": "string"
+            },
+            {
+              "id": "b775719f-125e-463c-ae72-458bc4659483",
+              "name": "job_salary",
+              "value": "={{ $json.job_salary }}",
+              "type": "string"
+            },
+            {
+              "id": "ee82521f-b573-4d52-aa26-4e46c5a5a0a3",
+              "name": "company_department",
+              "value": "={{ $json.company_department }}",
+              "type": "string"
+            },
+            {
+              "id": "667763ef-6bbf-422e-b98a-44bb51b835bb",
+              "name": "job_sector",
+              "value": "={{ $json.job_sector }}",
+              "type": "string"
+            },
+            {
+              "id": "e02990cc-70a0-4672-a050-6280df10fdb8",
+              "name": "contract_type",
+              "value": "={{ $json.contract_type }}",
+              "type": "string"
+            },
+            {
+              "id": "3d532878-6ff8-4d21-9bea-fd927ab38bd9",
+              "name": "signal_tier",
+              "value": "={{ $json.signal_tier }}",
+              "type": "string"
+            },
+            {
+              "id": "45833e66-5531-4b1f-b56c-3401f31448c8",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "49c83c67-536e-42be-a041-4b247875218b",
+              "name": "processed_at",
+              "value": "={{ $json.processed_at }}",
+              "type": "string"
+            },
+            {
+              "id": "e36b8eb9-3dc9-406b-aa74-0ba4839ff0eb",
+              "name": "company_url",
+              "value": "={{ $json.company_url }}",
+              "type": "string"
+            },
+            {
+              "id": "80d94137-bddf-4264-80c3-d0eb5ecda587",
+              "name": "poster_name",
+              "value": "={{ $json.poster_name }}",
+              "type": "string"
+            },
+            {
+              "id": "cf1fb289-8821-4cbf-bdea-814ee646ed9e",
+              "name": "poster_linkedin",
+              "value": "={{ $json.poster_linkedin }}",
+              "type": "string"
+            },
+            {
+              "id": "f7041f7f-79c8-4f8d-a280-56a151df3885",
+              "name": "company_logo",
+              "value": "={{ $json.company_logo }}",
+              "type": "string"
+            },
+            {
+              "id": "4dc74732-aa86-4718-9e3f-f2ac23552cda",
+              "name": "experience_level",
+              "value": "={{ $json.experience_level }}",
+              "type": "string"
+            },
+            {
+              "id": "ccbbece4-e599-4a22-91fd-6d5a4425240f",
+              "name": "apply_url",
+              "value": "={{ $json.apply_url }}",
+              "type": "string"
+            },
+            {
+              "id": "9c881010-3c28-4f7e-a5fd-da3e9f6814d2",
+              "name": "source",
+              "value": "={{ $json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "7c61ac99-d19a-48ed-94a0-754f00eba142",
+              "name": "description_vector",
+              "value": "={{ $json.description_vector }}",
+              "type": "string"
+            },
+            {
+              "id": "83620fee-933a-4de4-9652-91faa26f6260",
+              "name": "employment_type",
+              "value": "={{ $json.employment_type }}",
+              "type": "string"
+            },
+            {
+              "id": "e70e38db-bc1d-4bf4-807f-55155ff0ed8c",
+              "name": "work_mode",
+              "value": "={{ $json.work_mode }}",
+              "type": "string"
+            },
+            {
+              "id": "2fd7e6b1-856b-4d4a-b90d-7d177318cbe2",
+              "name": "metadata",
+              "value": "={{ $json.metadata }}",
+              "type": "string"
+            },
+            {
+              "id": "7b1de7ac-addb-4f76-a3bf-959d7acafff6",
+              "name": "tech_score",
+              "value": "={{ $json.tech_score }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        -416
+      ],
+      "id": "3e4f7fc9-4f8f-4bad-a263-3229d8799585",
+      "name": "Standardize input"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "id": "baa2b9fd-2bf2-4b18-8a36-57a905f43a2f",
+          "published_at": "2026-02-10T01:00:00+01:00",
+          "company_name": "RWS Group",
+          "job_title": "Linguistic Services Manager - Senior",
+          "job_url": "https://cz.linkedin.com/jobs/view/linguistic-services-manager-senior-at-rws-group-4348271301?trk=public_jobs_topcard-title",
+          "match_score": 0,
+          "job_description": "Job Purpose\n\nAs a Senior AI Linguistic Services Manager, you will be responsible for monitoring linguistic and overall quality of our deliveries in the broad spectrum of AI related services, early flagging quality issues and proposing improvement steps. Your role will involve day-to-day operations as well as participation on innovations strategies, including AI implementation into the linguistic processes, optimization of AI annotation and evaluation strategies and exploration of new areas for creative quality management in this everchanging and exciting environment.\n\nAbout Transform\n\nAt RWS, we enable the world’s largest enterprises to communicate with global audiences through cutting-edge language technology, AI-driven solutions, and expert services. Our RWS Transform division empowers organizations to accelerate digital transformation, scale global content, and unlock growth in every market.\n\nKey Responsibilities\n\nJob Overview \n\nProvide linguistic services and support for AI tasks to the production team, the partners and the customer. \nWith the help of your direct manager and colleagues, manage continuous and proactive development, design and implementation of quality management methodologies, AI-focused linguistic services (quality reporting and monitoring, vendor training, asset development & maintenance and more). \nDeliver assigned AI services tasks (e.g. enforcement of task specific guidelines, proactive management of quality across assigned languages and projects). \nProvide trainings to translators, annotators and assorted stakeholders. \nIdentify opportunities for process improvements and innovation in linguistic and AI workflows. \nStay updated on industry trends, best practices, and emerging technologies in AI language services. \n\nSkills & Experience\n\nLinguistic education or equivalent working experiences. \nAI specific courses, certificates and trainings will be a significant advantage \nMin. 2 years working experience (AI Services, quality management, ideally in a client facing role and/or supporting role in AI Services setup). \nPerfect command of spoken and written English. \nVery good skills with Microsoft Office software, especially MS Excel. \nCurrent and practical knowledge of AI annotation and evaluation, AI prompting and LLMs \nVery good coordinating and communication skills (providing training, communication with customers). \nMust be capable of working in a fast paced environment, have a flexible attitude to work and good problem resolution skills. \n\nLife at RWS \n\nRWS is a content solutions company, powered by technology and human expertise. We grow the value of ideas, data and content by making sure organizations are understood. Everywhere.\n\nOur proprietary technology, 45+ AI patents and human experts help organizations bring ideas to market faster, build deeper relationships across borders and cultures, and enter new markets with confidence – growing their business and connecting them to a world of opportunities.\n\nIt’s why over 80 of the world’s top 100 brands trust RWS to drive innovation, inform decisions and shape brand experiences.\n\nWith 60+ global locations, across five continents, our teams work with businesses across almost all industries. Innovating since 1958, RWS is headquartered in the UK and publicly listed on AIM, the London Stock Exchange regulated market (RWS.L).\n\nRWS Values\n\nWe Partner, We Pioneer, We Progress – and we´ll Deliver together.\n\nFor further information, please visit: RWS \n\nRWS embraces DEI and promotes equal opportunity, we are an Equal Opportunity Employer and prohibit discrimination and harassment of any kind. RWS is committed to the principle of equal employment opportunity for all employees and to providing employees with a work environment free of discrimination and harassment. All employment decisions at RWS are based on business needs, job requirements and individual qualifications, without regard to race, religion, nationality, ethnicity, sex, age, disability, or sexual orientation. RWS will not tolerate discrimination based on any of these characteristics\n\nRecruitment Agencies: RWS Holdings PLC does not accept agency resumes. Please do not forward any unsolicited resumes to any RWS employees. Any unsolicited resume received will be treated as the property of RWS and Terms & Conditions associated with the use of such resume will be considered null and void.\n\nShow more Show less",
+          "job_location": "Czechia",
+          "external_id": "4348271301",
+          "job_salary": "{}",
+          "company_department": null,
+          "job_sector": "Business Content",
+          "contract_type": "Full-time",
+          "signal_tier": "low",
+          "status": "passed_description",
+          "processed_at": "2026-02-11T16:34:25.43+01:00",
+          "company_url": "https://uk.linkedin.com/company/rws-group?trk=public_jobs_topcard-org-name",
+          "poster_name": "",
+          "poster_linkedin": "",
+          "company_logo": "https://media.licdn.com/dms/image/v2/D4D0BAQHp8SQdhwh8ow/company-logo_100_100/B4DZb4U7zVGYAQ-/0/1747922959928/rws_group_logo?e=2147483647&v=beta&t=eXiIzg7lMeIea8tz4cPaitFEWfepJ1_epWp_nN_IC74",
+          "experience_level": "Mid-Senior level",
+          "apply_url": "https://cz.linkedin.com/jobs/view/linguistic-services-manager-senior-at-rws-group-4348271301?trk=public_jobs_topcard-title",
+          "source": "linkedin",
+          "description_vector": "[-0.024095511,0.003334267,0.0036114107,-0.055309344,-0.0087043205,-0.0056099966,-0.012660463,0.013225928,0.009961318,0.008928373,-0.015142454,0.0014433315,-0.00040239494,0.031869087,0.113430746,-1.3769882e-05,0.0121669015,0.0049606655,-0.0248302,-0.024628907,-0.009370722,0.028833048,0.011213489,0.0076720626,-0.022909977,-0.019517323,0.028477244,0.008548852,0.04166727,-0.017001051,-0.016022908,0.031461798,0.010929505,0.02264243,-0.01478218,0.03313575,0.0011913058,-0.007695864,0.007576444,0.034804307,-0.0068916264,0.013451237,0.011977588,-0.028968407,-0.03238098,0.00095557846,-0.0002537103,-0.019252285,0.0031659051,0.0059383856,-0.007535056,0.0018208926,-0.027798684,-0.16517226,-0.020610675,0.010593432,0.027826007,0.017256135,0.010657276,0.006014635,-0.0064810673,0.022388492,-0.026013212,-0.0119902035,0.009687119,-0.0025022477,0.001181818,-0.020968353,-0.01092136,-0.022360137,-0.011829097,0.01745317,0.033023823,-0.026513766,0.012997767,-0.012081374,0.00782465,-0.0049256613,0.029881885,0.020332912,0.00054605806,-0.0018981029,-0.026138308,-0.0240278,0.011009537,0.02717453,-0.002692218,-0.022812914,0.024072958,0.010742802,-0.0034877488,-0.024951033,-0.0050821775,0.027443668,0.004499762,-0.0118224835,0.0065614786,-0.0032311976,0.024496188,-0.005602905,-0.043777443,-0.021024588,0.017135503,-0.010095067,0.015553934,0.009914621,-0.027118467,-0.022768881,-0.0126012,0.034430098,0.012498721,-0.01241146,-0.02894414,0.034668345,-0.0022808532,-0.16117264,0.04290901,-0.054539558,-0.02057748,-0.004799707,-0.00025545168,-0.0070619453,0.01896527,0.01642502,-0.002636668,0.0030783094,0.0033911108,-0.005996879,-0.020910945,-0.018054489,-0.01614404,-0.03493689,0.020368053,-0.018039994,-0.021920685,0.024266481,0.0060439957,0.0074659623,-0.005482497,-5.3714422e-05,-0.015021568,0.01681289,0.013220519,0.00035609776,0.0073957248,-0.024406055,-0.013163232,-0.014911972,0.01602624,-0.028060824,0.008897309,-0.042239606,-0.016051197,-0.009508201,-0.0074901506,-0.009802927,-0.0037697277,-0.00039842117,-0.0017508424,0.016988551,0.0031777835,0.0111012515,-0.00490811,0.038625404,0.015203043,-0.007289783,0.012673743,0.010328887,-0.01501441,0.0013196925,0.01288754,-0.032268036,0.009678594,-0.008869141,0.00752219,0.0047729067,-0.009320986,0.020194642,0.010974299,-0.0122519685,0.036007937,0.020289823,-0.002728485,0.0058657243,-0.015003301,0.0020316595,0.0013648376,0.011972943,0.021783706,0.015410987,0.016720291,-0.014819594,0.008235461,-0.0014239602,-0.0028258944,-0.006218237,-0.010932228,0.03199453,0.00037622827,0.012727925,0.02372222,-0.026570115,-0.016911678,0.019775432,0.013248008,-0.024176484,-0.0005108199,-0.004143135,-0.0013905634,-0.018157767,-0.0030096332,0.008236032,-0.019052697,-0.03683354,-0.0132311685,-0.014425717,-0.017266907,-0.0057154777,0.012203673,0.009767596,-0.0016517254,-0.011776494,-0.011471508,-0.011258779,-0.022227379,-0.014333544,-0.0104656555,0.0044877874,-0.0052138194,-0.0047567873,0.011645834,0.007921898,-0.012718625,0.022713432,0.0054052197,-0.0034867013,0.014861658,-0.0048585385,0.032566328,-0.040338106,0.008780766,-0.0021107637,0.0090991305,0.012120889,-0.0020346881,-0.0033034086,0.010502194,0.0058179093,-0.0040428583,-0.024512084,0.0012472036,-0.0043360717,-0.013689518,-0.02715451,0.00051543326,-0.008850665,0.025774201,-0.011253791,0.023687197,-0.002989854,0.01515963,0.006673066,-0.01908703,-0.007974869,0.028914627,-0.0064463965,0.014920831,0.0053532925,-0.010746291,0.028058471,0.026081402,0.0029654647,0.004125648,-0.035155725,-0.011813325,-0.000953983,-0.060442574,0.03974563,0.011149874,-0.0046575326,-0.018990198,0.010723122,0.009369778,-0.02379561,-0.021033857,0.0114067495,-0.017608935,-0.03110917,0.017893296,-0.02320324,-0.0030026832,0.0045494004,-0.010393888,-0.0012426869,0.016746163,-0.0199186,-0.015428656,0.011437029,-0.0092159845,0.023384297,-0.008347634,-0.016734783,0.01573096,0.066110395,-0.032257307,-0.022517022,0.0012405023,0.0410393,-0.0135467285,-0.012726234,9.165462e-05,-0.008201282,-0.011545487,-0.0053985678,-0.019773284,-0.02969931,0.0046370695,-0.029155562,-0.00912655,0.02252341,0.033618737,0.03677494,-0.017613232,-0.022639832,-0.0029730976,0.0100112995,0.0058652516,0.022918029,0.031050414,-0.0039499537,0.0218252,0.020242428,0.011623039,-0.036416303,-0.0012544784,-0.028093837,0.035949342,0.010492671,-0.008164769,0.014372177,-0.013246167,-0.0039426554,-0.0071468763,0.012761435,-0.015388789,0.011207132,-0.00823536,-0.008042517,0.0267054,-0.022022871,-0.0018383202,0.023406621,0.009999854,0.003695094,-0.03119975,0.0058411118,-0.043094963,-0.0011229633,-0.003673124,0.025800878,-0.013587221,-0.0031454659,0.00648911,-0.0066660414,0.0015539194,-0.030051967,0.0059520015,0.008628355,-0.016041003,-0.0045071375,0.024136553,-0.01657518,0.005876961,-0.0043773134,0.018496046,0.005002696,-0.009451425,0.00730498,-0.017532656,0.010220101,-0.016906008,0.012036153,-0.012813526,0.008244703,0.03550767,0.0062996196,-0.0058772084,0.007234629,0.0011686399,0.011670978,0.009893445,0.010659992,0.015410283,5.3011132e-05,-0.0059034615,0.0020586064,-0.016015826,-0.008370677,0.029476142,0.018855728,0.008746056,-0.0037372904,-0.008517334,-0.0002333238,0.0070957914,-0.0031970611,-0.016942423,-0.010464388,0.0077334014,0.00750727,-0.018270738,-0.001163736,-0.015973119,-0.0015973581,0.037182495,0.01696384,0.0019655824,-0.014945845,0.01232283,0.0066389763,-0.026127359,0.020597104,0.03452289,-0.015556125,0.013133802,-0.029914474,-0.02503919,0.004107406,0.04811732,0.010105742,-0.004631993,-0.0124162305,-0.010556115,-0.024142055,-0.02285763,0.0051391204,0.010018091,-0.02022661,-0.025046702,0.007326236,0.0258461,-0.0032024619,0.0016662886,0.012600131,0.00040440971,0.001883144,0.026931072,-0.034111995,-0.0246978,0.006340954,0.017265327,-0.006942147,7.270915e-05,0.0048651933,-0.013369939,-0.010560468,-0.03383472,0.021846592,0.00840644,-0.009364513,-0.014495635,-0.009236409,-0.008010202,0.014792638,-0.022390492,-0.0074501997,0.004002078,0.0039448743,0.024353439,0.012956389,0.010234732,-0.01472348,-0.017405972,-0.027633257,-0.00088234374,0.00071947486,0.028111584,-0.014646035,-0.025539506,0.03678001,-0.016568407,-0.025735393,0.0052995617,-0.04323596,-0.018573398,0.023742741,-0.010650697,0.011249212,-0.0029361125,-0.013078877,-0.006120845,-0.0073944125,-0.007988301,-0.03307845,-0.00758742,0.002933022,-0.010319236,-0.004782228,-0.009342852,0.035659287,-0.0064579677,0.01708912,0.0054117884,-0.010437342,-0.016921328,-0.009192952,0.0055316132,0.021767622,0.028418696,0.0017925396,-0.002728963,0.004951268,0.018024663,0.023930928,-0.0018238162,0.011116545,-0.015881438,-0.01799285,-0.0020650402,-0.023927882,-0.015761388,-0.006557091,-0.024193887,-0.011111749,-0.0054666735,0.021693185,0.01738329,-0.0048398543,0.020459762,0.022850445,0.014234885,0.013012021,0.00031772035,0.013021618,0.012593168,-0.011036301,0.018298337,0.025553104,0.012072415,-0.0009508249,-0.011870608,-0.014372525,-0.017806388,-0.04938256,0.004888764,-0.06893481,0.005344382,0.0120888185,-0.004664569,-0.031413846,0.0029000242,-0.010484752,-0.016281247,0.01766039,0.0012635113,0.008588332,-0.022562044,0.012167166,0.010399375,-0.008581851,-0.026198147,0.0036364268,0.0051686736,-0.011797677,-0.050637238,0.013121414,0.006023409,0.025008699,-0.021688579,0.0053882063,-0.015740562,0.015697151,0.005176682,0.003143264,0.019526342,-0.023220697,0.010010551,-0.0032923776,0.009503507,0.027709076,0.0042954674,0.013528496,0.0049296706,0.010611498,0.007232639,-0.0010403786,0.004660731,-0.038080297,-0.01090006,-0.0028176415,0.016203422,-7.343039e-05,-0.011784464,0.02680488,0.024574775,-0.013669527,0.0012932577,-0.00021843213,-0.009411971,0.02598284,-0.01088621,-0.03164298,0.0072299037,-0.0030213003,0.010535951,-0.008155913,-0.020156471,0.019432398,0.0044351323,-0.028363306,0.030331068,0.008331573,0.035760984,-0.009674672,0.033792663,-0.010922081,-0.06160652,-0.031144941,-0.011100373,-0.02448876,0.021063337,-0.0016341705,0.04156772,-0.0030157557,-0.0013555875,-0.0048341067,-0.007137162,-0.082166545,-0.0024997185,0.012334141,0.025224201,-0.027430655,0.003170543,0.024959765,-0.029923173,0.009694215,-0.016132312,0.005434634,-0.0026054648,-0.007593338,-0.01635701,0.0040917285,-0.016693497,-0.00598976,0.0118558435,0.003704965,-0.023690017,-0.02022398,0.0051237154,0.00080159825,-0.008111234,-0.0082209315,0.0016664404,0.0003967002,-0.0029196236,0.031254757,0.02694585,0.024257114,-0.140517,0.00027677644,-0.017062662,0.02779299,0.00084369973,-0.011309602,0.0025813729,0.021216936,0.010058931,-0.017516727,0.0022278444,-0.04463874,-0.03469295,0.005272761,-0.011546109,0.08010611,-0.015800169,0.00929781,-0.019707318,0.005473565,-0.0046109916,-0.008836146,-0.0024608,-0.011705132,0.0012819871,0.008232432,0.004692366,-0.014748352,-0.0024173108,0.0320642,0.014219746,0.0008344495,-0.017344479,-0.0028962912,0.0056505064,-0.016229358,-0.01194996,-0.015465292,0.031273328,-0.013950773,0.02209775,0.020253312,-0.0128373895,0.009984997,0.0035979797,-0.016704667,0.011286153,-0.0037306068,0.01503198,0.014207744,-0.00019429943,-0.0833895,-0.0021855785,0.0093662,0.041395213,0.030269463,-0.010297117,0.014427538,0.01506087,-0.00021680334,0.01606705,0.009065326,-0.02207063,0.033699874,-0.0037705055,0.011748672,0.0020306709,-0.0019606205,0.0043821214,0.020998286,0.009425828,-0.0052327975,-0.010667745,0.019379199,-0.011425888,-0.004439177,0.012234208,0.011490659,0.0048239515,-0.00056902895,0.0011170082,-0.011546632,0.010738273,0.015309024,-0.0018670707,-0.0014961585,-0.013195379,-0.0023505506,0.026354738,0.009798816,0.0018988599,0.014136255,0.010147159,-0.0012041987,-0.004702556,0.008883752,-0.010155964,0.015039778,-0.0043730685,0.002001082,0.02069254,-0.0021709267,2.2782046e-05,-0.043038037,0.0024561156,-0.024225187,0.019252976,0.0011876522,0.0068887924,-0.017984264,0.008074806,0.0007964469,-0.0066588786,-0.0055936417,-0.004533557,-0.009395915,0.0075490805,-0.0052456544,-0.0066920626,0.0032115865,0.018100524,0.0014529179,-0.01720001,0.0024489772,-0.010768608,0.014612313,0.0026012936,-0.0005108581,-0.0015585457,-0.016791832,0.010393169,-0.0040480415,0.0066790166,0.0064947894,-0.005107668,-0.005925074,-0.0150052775,0.00047993957,0.008836958,-0.022555081,0.006424063,0.0023246887,0.009842952,-0.010926244,-0.0022033625,0.0067426898,-0.010424803,-0.0031873374,-0.0050227228,-0.014753282,0.004450193,-0.012582811,0.015026324,-0.004623432,0.0052240933,-0.0027592347,0.012618475,-0.014722192,-0.0010565857,-0.0047305278,0.010907217,0.008888071,0.022601174,-0.010883125,0.013278693,0.013865679,-0.004844188,-0.003689976,-0.008434458,0.013321491,0.0011868624,-0.0039363024,-0.012891706,0.005503943,0.011874065,-0.0056690127,0.010790673,-0.015694732,-0.023933504,0.000729631,-0.0029803182,0.006630722,0.01406243,0.0051796404,0.01366019,0.02469149,-0.012135742,0.015704114,0.00016929118,0.004006,-0.0049489904,-0.015908893,0.01780072,-0.029685065,-0.0065513044,-0.016249148,0.0038679272,-0.024782177,-0.0058193295,0.013840794,-0.013524077,-0.021333003,-0.0058591254,-0.0037803142,-0.017398652,-0.017060168,0.0045190277,0.008320207,-0.01098348,0.032266542,-0.011930718,0.017510798,0.018901173,0.012393506,-0.00590601,0.008245888,-0.0070329024,-0.011542261,-0.009313763,-0.0012555461,0.009567965,-0.015578099,0.00822245,-0.0011105754,0.0024449807,0.0039349403,0.0094592115,0.01650677,-0.0043997667,0.010449975,0.027146382,-0.017993314,0.0044367,-0.004473815,-0.02253872,0.017459743,0.011838207,-0.007643453,0.007986244,0.037958086,0.0032995983,0.010531958,-0.027201248,-0.009776769,0.0032154706,0.00694786,0.0035863142,0.007162378,-0.0052617025,0.012798373,-0.014805598,0.005197042,0.019401247,0.02350551,-0.01451925,-0.0099691255,0.010016254,0.0013768489,-0.02216026,-0.013396137,-0.01643564,0.003705672,-0.0058555813,0.0140986005,0.014204163,0.0042282455,0.00044033927,-0.0013602629,-0.012891329,0.007469686,0.007019739,0.00044168447,0.011380337,0.012391457,-0.011852046,-0.009476263,-0.011207938,0.0010643187,-0.017766377,0.01542021,0.0063242395,-0.02644788,0.0037315136,0.0049900943,-8.876649e-05,0.004628442,0.012592092,0.016619302,0.02350822,-0.0029053718,0.0037918536,0.00787975,-0.0041888882,0.022942238,-0.0032695632,0.018914701,-0.0021001997,-6.0731094e-05,-0.011875879,-0.012569762,0.005462944,0.012721196,-0.0041295798,-0.012525348,0.011873898,-0.009404496,0.010473752,0.00051747315,0.020447768,-0.0014144662,0.10092076,0.011384055,-0.00025004623,-0.003547187,0.014388012,-0.0051603713,0.008227699,-0.021116788,0.016074471,-0.0028476864,0.006710994,-0.011907414,-0.012728613,-0.006363317,0.00038414475,-0.009382907,-0.006719024,0.015674166,-0.003620055,0.0041902,-0.0012219809,0.007866044,-0.0040057814,-0.023260487,-0.0030886692,0.000235751,-0.019051736,0.0040888507,-0.004043893,-0.0052431216,-0.024898868,-0.014662928,0.0055932477,-0.001964967,-0.0127426665,-0.00683534,0.009491935,0.012787628,0.012027734,-0.0013802617,0.0076685264,-0.00059176976,0.0049794386,0.008015136,0.012169992,0.0169923,-0.0059812325,0.00602121,-0.015661234,-0.011061874,-0.00020392427,-0.00351616,-0.00038730484,0.01348784,0.0016615443,-0.0016121817,-0.0023355717,-0.016624827,-0.0099166045,-0.018452877,0.0070822923,-0.010389784,-0.012574984,0.017315835,0.0045851967,-0.0062996023,-0.01157895,-0.01685187,-0.0051628016,-0.0025518914,0.005307045,0.0033753342,-0.0026901413,0.013622647,0.028244328,0.006368014,0.0012150841,-0.004676626,-0.005045283,-0.006828631,0.010417224,0.018111585,-0.023001498,-0.0040516406,0.007040798,-0.0017008319,-0.0032188692,-0.017897595,0.003839043,-0.00025726098,-0.008228901,-0.012005795,0.008993123,-0.00036932636,-0.00746743,-0.0037801436,0.043447662,0.01748971,0.011297318,0.0066060126,0.014307285,0.0046201386,-0.0064355126,0.0022483761,0.01882906,-0.014889072,-0.0021457677,-0.01359109,-0.023059009,-0.011972136,-0.011311143,-0.0077635096,0.0029053134,0.0022222216,-0.023869248,0.010237605,-0.012213923,0.02572838,0.011260234,-0.00078300165,0.011666154,-0.012593845,-0.0031872864,0.00031331187,0.0029014081,-0.0074296696,0.0041227085,-0.009567274,-0.0040958035,0.0035745176,0.0031406623,-0.010459654,-0.0066629574,0.0018806068,-0.0009426248,-0.0032092,0.008109627,0.0040252,0.0038188924,-0.009882744,-0.011242011,0.0068618483,0.0055341,0.008275781,0.010969932,0.014527576,-0.0032097958,0.009470331,0.023060178,-0.014220434,-0.019006565,0.021755407,0.0044358997,0.02948798,0.013207003,0.0051866053,0.0118004875,0.0093888715,0.0009608069,0.01611443,-0.007499046,0.0031012683,-0.0108676115,-0.011720465,-0.006671677,0.008441029,-0.009395016,0.008186365,-0.01214113,-0.001648051,-0.01948069,-0.0030795606,0.015159331,0.005142055,0.0015672267,-0.022418898,0.0068252566,-0.014561262,-0.007839796,0.008927784,-0.013574209,0.025957191,-0.015147131,0.0010684712,-0.012336957,-0.014035717,-0.0041791135,-0.006871185,0.0061842757,-0.02530152,0.008877648,-0.008627095,0.0058646905,-0.011263893,-0.006480203,-0.0032040232,-0.002384579,0.02722793,0.0142123625,0.002485667,0.00882904,0.029726734,0.02482198,-0.012596666,0.014815785,-0.0023690215,0.0022540207,-0.0027505872,-0.009306627,-0.008503502,-0.018425867,-0.023313854,-0.0021228315,-0.0014831205,-0.0055641034,0.0056718155,0.0054288027,-0.0068079317,-0.005550181,-0.00970574,-0.0064038103,-0.012852625,0.0032186105,-0.0041989894,0.020549756,-0.006491516,0.0014782092,0.00096847414,0.011224441,0.007491441,-0.015000619,0.0033653805,-0.010214331,0.009752465,-0.0100272065,-0.0023550238,-0.0011602896,-0.008215403,0.0011496162,-0.0063438783,0.000858177,0.0134462705,0.011221215,0.0032444557,0.0039395825,0.007374171,-0.009928612,0.0059390636,-0.010105112,0.0072117997,0.0070694564,-0.008361029,-0.008604071,0.007932853,0.0017532427,0.005214772,0.009482159,-0.07567925,0.006025332,0.0065080062,0.0031193842,-0.0025169,-0.0017635279,0.012318978,-0.003884998,0.006759189,0.000975611,0.01429696,-0.0016120266,0.027677003,-0.00060484716,-0.0022026156,0.00816784,-0.007058897,0.008354873,0.006277483,-0.003253715,-0.009508446,0.005246965,-0.0019922557,-0.0030177694,0.0016000874,0.0047176573,0.00035353625,0.0018581286,0.0033040168,0.0104067065,0.018438544,3.4267498e-05,-0.004478401,0.0010680761,-0.0022945085,-0.0076740044,0.0021548057,0.0017741083,-0.010768056,-0.0074899816,0.02101279,-0.009457762,0.004773209,0.0027955105,-0.0011884494,0.00706253,0.020464066,-0.014565502,0.021981962,-0.019071722,0.0145416735,0.003993822,0.004987444,0.0031565183,-0.003253023,-0.02067346,-0.0013799045,-0.014937765,0.004509121,-0.021140367,-0.017553294,0.0012836594,0.0018490058,0.014034485,0.003648102,-0.015370291,-0.0030097354,-0.010963418,0.00047838062,0.00610738,0.010378262,-0.0071437582,-0.015711099,-0.0005705386,0.024786415,0.0018086268,0.016334038,0.011688505,0.012845115,0.012948156,-0.017446877,0.015368333,-0.0026176395,-0.0026969826,0.004089848,0.008077383,0.00075473846,0.007943524,-0.009740372,0.0011150766,-0.008667654,0.01294712,0.0035869954,-0.0076705846,-0.023448782,0.00056132744,-0.003249038,-0.006072214,-0.0049002906,0.007828066,0.00450424,-0.010185786,0.016015666,0.0013140176,-0.014993714,-0.010235683,-0.0054330546,0.0011254374,0.01156995,0.008579076,0.0047639734,0.017168183,0.014630366,-0.0027695568,0.0118674245,0.01088451,0.00020069335,-0.002578113,-0.0014002763,-0.001791625,-0.020188956,0.014661077,-0.017128304,0.00079684186,0.005705995,0.0141702,0.0015661329,0.0031278227,0.016751122,0.0030950524,-0.008166991,0.018488871,0.015914075,-0.008263206,-0.017925331,0.011273411,0.018698676,-0.00025694777,0.002140803,0.0063301297,0.00606175,0.009001722,-0.0038671186,-0.01661975,-0.0047860527,0.013690851,0.003420078,0.018695436,-0.0033888922,-0.0012521141,-0.010143186,0.0026570184,0.0075622913,0.009097797,-0.001334253,-0.0016029367,0.02103545,-0.008955111,0.007873273,-0.001144626,0.006438178,0.01729749,0.0035437527,-0.0027596944,0.009714984,0.00796054,-0.007683295,0.0069105877,-0.006851783,0.005577984,0.0060128644,-0.0007047337,-0.0007059335,0.0075042974,-0.0021649192,0.0017630699,0.0011684562,0.006505608,0.0026632692,0.0010839624,0.0056550433,0.0027336455,-0.002659678,-0.002502526,-0.00068055675,-0.011529241,0.005505403,-0.005784339,0.010020967,0.008239393,-3.6701487e-05,-0.011909917,5.6872326e-05,-0.0012203358,0.005689549,0.0011991966,0.00024057458,0.012000666,0.014290984,4.352505e-05,-0.008648129,-0.006073606,-0.0006841274,-0.003973644,0.00072917563,-0.096532255,0.016550124,-0.0048328545,-0.014528923,-0.0110075,-0.006168073,-0.010360752,0.018337354,-0.011926426,0.0008214765,-0.0057891384,0.0056102118,0.008348241,-0.01578184,0.0006127112,-0.019490875,-0.007406052,-0.011254482,-0.0130403405,0.011809433,0.0061754202,-0.010384346,-0.027934711,0.018188488,0.0095191635,-0.020672971,-0.0031107636,-0.000996354,0.013982037,-0.0099742655,-0.012839536,-0.0059097246,0.026590424,0.006219187,7.801962e-06,-0.0054307575,0.012149755,-0.0034808028,-0.13608362,-0.008088371,0.0031062292,-0.005053324,0.0071689845,-0.004827588,-2.41429e-05,-0.003701868,-0.006838244,-0.015469855,-0.004701412,-0.0100867385,-0.005773721,0.018560775,0.015913773,0.01097647,0.007355973,-0.00400259,0.0048092725,-0.011499145,-0.018993486,0.0033903865,-0.0028848469,0.00923776,0.021994056,0.011630389,0.021777015,-0.0102403145,0.0049287723,-0.0138708195,0.027920885,-0.0016954214,0.0065219626,0.004934912,0.0149499895,0.0014913257,-0.0059883124,0.013062057,-0.019017214,-0.0023990597,0.0008677734,0.002251744,0.020988833,0.0059166984,0.0040051737,-0.004977446,-0.008493201,-0.015258441,0.00023644506,-0.006006866,-0.0020387978,0.004640884,0.008583153,-0.009838164,0.007752065,0.0032048607,0.009598475,0.014565505,0.005265067,0.00951013,-0.01377766,-0.0110236555,0.004547039,-0.0029671967,0.020037245,0.008949778,-0.011344738,0.00974239]",
+          "employment_type": null,
+          "work_mode": null,
+          "metadata": {
+            "flags": {
+              "car": "No",
+              "n8n": "No",
+              "agents": "No",
+              "equity": "No",
+              "remote_3_2": "No",
+              "remote_4_1": "No",
+              "remote_5_5": "No",
+              "team_under_5": "No",
+              "result_driven": "No",
+              "flat_hierarchy": "No",
+              "salary_90k_100k": "No",
+              "salary_100k_120k": "No",
+              "salary_120k_plus": "No"
+            },
+            "scores": {
+              "bonus": 20,
+              "pillar": 181,
+              "mission": 0.12499999999999999,
+              "responsibility": 0.375
+            }
+          },
+          "tech_score": 15
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Standardize input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Check pillar fit - llm",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Check pillar fit - llm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adjust score llm": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adjust score cosine": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        []
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Check bonus boolean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Check bonus boolean",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check pillar fit - llm": {
+      "main": [
+        [
+          {
+            "node": "Adjust score llm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check ideal - cosine": {
+      "main": [
+        [
+          {
+            "node": "Adjust score cosine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check bonus boolean": {
+      "main": [
+        [
+          {
+            "node": "Calculate bonus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate bonus": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate weighted sum": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Is high or rare?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize sum + payload": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'research_high_rare'": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is high or rare?": {
+      "main": [
+        [
+          {
+            "node": "Call 'research_high_rare'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Check pillar fit - llm",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Check bonus boolean",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Finalize sum + payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Calculate weighted sum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Standardize input": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check ideal - cosine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Prague",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "Zj1I7MhBC-OsOLt6D4Qyg"
+  },
+  "versionId": "6b281c10-1916-4f23-b087-5b25a46fc8b0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8d632457a9ca1b951db997b3c2dccbdfedbb1af868ba75f2add66522e265ced0"
+  },
+  "id": "pkmhdMP44aCRMoT9gz1ta",
+  "tags": [
+    {
+      "updatedAt": "2026-01-26T08:43:12.205Z",
+      "createdAt": "2026-01-26T08:43:12.205Z",
+      "id": "q3Jm1TtyectpAeLG",
+      "name": "lead_score"
+    }
+  ]
+}
