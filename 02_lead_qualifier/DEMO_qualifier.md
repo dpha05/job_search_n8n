@@ -1,13 +1,12 @@
 # 🧠 Phase 2: Lead Qualification 
-**Hybrid AI-driven scoring engine with semantic anchors and state-machine reliability.**
+**Hybrid weighted AI lead scoring with cosine semantic anchors.**
 
 <br>
 
 ### 📊 Highlights
-* **71% Rejection filter:** Two-stage hybrid filtering (AI + Cosine Similarity) auto-rejects low-level leads before deep-dive processing.
-* **Dual-Strategy Scoring:** Combines high-context **Gemini 3.0 Flash** reasoning for core pillars with **Llama 4 (Groq)** boolean extraction for zero-hallucination benefit checks.
-* **Lazy-Loading Optimization:** "Lean Payload" architecture strips 1536D vectors during transit to optimize memory, fetching them only during final database-side similarity math.
-* **Self-Healing State Machine:** Automated daily sync identifies leads in transient statuses (e.g., `passed_title`) to ensure 100% fault tolerance and zero data loss.
+* **71% Rejection Filter:** Two-stage rejection of irrelevant leads: Regex keyword filter for titles and hybrid 70/30 weighted filtering with AI + Cosine Similarity for descriptions.
+* **Hallucination Prevention:** For important pillars: frontier model **Gemini 3.0** with detailed system prompt, including scoring tiers, few-shot examples and standard value references and for benefits and logistics: lighter **OLlama 4 (Groq)** doing boolean extraction, leaving consistent math to code.
+* **Self-Healing Status Sync:** Automated daily sync identifies leads in transient statuses (faulty executions) to ensure fault tolerance and minimize data loss.
 
 <br>
 
@@ -23,7 +22,7 @@
 
 <br>
 
-### 🎥 Video Walkthrough (100 Seconds)
+### 🎥 Video Walkthrough (97 Seconds)
 
 [![Video Walkthrough Preview](https://img.youtube.com/vi/iOiFAwF-i9M/0.jpg)](https://www.youtube.com/watch?v=iOiFAwF-i9M)
 
@@ -35,23 +34,23 @@
 
 ### 🖼️ n8n Workflow Screenshots
 
-**Stage 1: Technical Filter:**
-![Technical Filter Preview](assets/screenshot_reject.png)
+**Stage 1: Reject Technical Leads:**
+![Reject Technical Preview](assets/screenshot_reject.png)
 
 <br>
 
-**Stage 2: 3-Branch Scoring Engine:**
-![Scoring Engine Preview](assets/screenshot_score.png)
+**Stage 2: Score Filtered Leads:**
+![Score Filtered Preview](assets/screenshot_score.png)
 
 <br>
 
-**Global Anchor Management:**
-![Global Anchors Preview](assets/screenshot_anchor.png)
+**Setting Global Anchors:**
+![Set Global Anchors Preview](assets/screenshot_anchor.png)
 
 <br>
 
-**Status Sync:**
-![Status Sync Preview](assets/screenshot_sync.png)
+**Sync Daily Status:**
+![Sync Status Preview](assets/screenshot_sync.png)
 
 <br>
 
