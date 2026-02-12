@@ -4,7 +4,7 @@
 <br>
 
 ### 📊 Highlights
-* **71% Noise Filtering:** Two-stage Regex targets only relevant listings and data for the database.
+* **Noise Filtering:** Two-stage Regex targets only relevant listings and data for the database.
 * **Direct XML/HTML Extraction:** 11-node custom parser extracts data directly from raw source code (0 cost and maintenance).
 * **Semantic Deduplication:** 95% Cosine Similarity threshold (via pgvector) prevents duplicate leads across different sources.
 * **Modular Structure:** Designed to accept new sources (e.g., Google Sheets) by mapping to a unified schema.
