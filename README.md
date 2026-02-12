@@ -42,6 +42,15 @@ An end-to-end autonomous qualification pipeline designed to identify high-signal
 - **Universal Similarity Service:** Implements a polymorphic PostgreSQL function `check_vibe()`. This single function accepts a `target_key` parameter, allowing the system to toggle between "Technical" and "Ideal" anchor comparisons without duplicating SQL logic or math formulas.
 - **Lazy-Loading Data Pipeline:** To optimize Node.js memory limits within n8n, the system utilizes a "Lean Payload" strategy. Heavy 1536D vectors are stripped during workflow transit and only fetched from Supabase via "Lazy Loading" at the exact moment of similarity calculation.
 
+---
+
+## 🛡️ System Resilience & Monitoring
+*Focus: Global exception handling and real-time pipeline observability.*
+
+- **Centralized Error Orchestration:** The system utilizes a dedicated **Global Error Workflow** acting as a universal listener. Any node failure across any phase (Ingestion, Filtering, or Scoring) triggers an immediate context-capture routine and sends a priority notification via Pushover API.
+
+---
+
 ## 🛠️ Tech Stack
 - **Orchestration:** n8n (Self-hosted)
 - **Database:** Supabase (PostgreSQL + `pgvector`)
